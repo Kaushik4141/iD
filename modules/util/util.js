@@ -190,8 +190,9 @@ export function utilGetAllNodes(ids, graph) {
  *                             label elsewhere in the UI.
  */
 export function utilDisplayName(entity, hideNetwork, isMapLabel) {
-    var localizedNameKey = 'name:' + localizer.languageCode().toLowerCase();
-    var name = entity.tags[localizedNameKey] || entity.tags.name || '';
+    const name = localizer.expandedLocaleCodes()
+        .map(code => entity.tags[`name:${code}`])
+        .find(Boolean) || entity.tags.name || '';
 
     var tags = {
         direction: entity.tags.direction,

@@ -46,12 +46,13 @@ _Breaking developer changes, which may affect downstream projects or sites that 
 * Fix some gpx/geojson properties not visible, such as numbers or complex data structures ([#11636], thanks [@k-yle])
 #### :earth_asia: Localization
 * The Languages field shows language names in your preferred language. ([#11699], thanks [@Razen04])
+* When labelling features, match locale codes like `zh-CN` to name tags like `name:zh-Hans` ([#10911], thanks [@k-yle])
 #### :hourglass: Performance
 #### :mortar_board: Walkthrough / Help
 #### :hammer: Development
 * Change package name to `@openstreetmap/id` to be able to publish releases on npm
 
-
+[#10911]: https://github.com/openstreetmap/iD/pull/10911
 [#11522]: https://github.com/openstreetmap/iD/issues/11522
 [#11636]: https://github.com/openstreetmap/iD/pull/11636
 [#11699]: https://github.com/openstreetmap/iD/pull/11699

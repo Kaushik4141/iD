@@ -352,6 +352,22 @@ describe('iD.util', function() {
         it('uses only the housenumber for map labels', () => {
             expect(iD.utilDisplayName({ tags: { 'addr:housenumber': '31', 'addr:street': 'Princes Street' } }, undefined, true)).to.eql('31');
         });
+
+        describe('localised names', () => {
+            it('sanity check', () => {
+                // these tests depend on the locale of the test environment.
+                // check what the locale is first, to avoid confusion.
+                expect(iD.localizer.expandedLocaleCodes()).toStrictEqual(['en-US', 'en-Latn-US', 'en-Latn', 'en']);
+            });
+            it('considers the original locale code first', () => {
+                expect(iD.utilDisplayName({ tags: { name: '5', 'name:en': '4', 'name:en-Latn': '3', 'name:en-Latn-US': '2', 'name:en-US': '1' } }, undefined, true)).toBe('1');
+            });
+            it('fallbacks to the maxmimised locale', () => {
+                expect(iD.utilDisplayName({ tags: { name: '5', 'name:en': '4', 'name:en-Latn': '3', 'name:en-Latn-US': '2' } }, undefined, true)).toBe('2');
+                expect(iD.utilDisplayName({ tags: { name: '5', 'name:en': '4', 'name:en-Latn': '3' } }, undefined, true)).toBe('3');
+                expect(iD.utilDisplayName({ tags: { name: '5', 'name:en': '4' } }, undefined, true)).toBe('4');
+            });
+        });
     });
 
     describe('utilOldestID', function() {

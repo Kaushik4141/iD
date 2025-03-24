@@ -2,7 +2,7 @@ import { escape } from 'lodash-es';
 
 import { fileFetcher } from './file_fetcher';
 import { utilDetect } from '../util/detect';
-import { utilStringQs } from '../util';
+import { utilExpandLocaleCode, utilStringQs } from '../util';
 import { utilArrayUniq } from '../util/array';
 import { presetsCdnUrl } from '../../config/id.js';
 
@@ -47,6 +47,7 @@ export function coreLocalizer() {
     let _localeCode = 'en-US';
     // `_localeCodes` must contain `_localeCode` first, optionally followed by fallbacks
     let _localeCodes = ['en-US', 'en'];
+    let _expandedLocaleCodes = utilExpandLocaleCode(_localeCode);
     let _languageCode = 'en';
     let _textDirection = 'ltr';
     let _usesMetric = false;
@@ -56,6 +57,7 @@ export function coreLocalizer() {
     // getters for the current locale parameters
     localizer.localeCode = () => _localeCode;
     localizer.localeCodes = () => _localeCodes;
+    localizer.expandedLocaleCodes = () => _expandedLocaleCodes;
     localizer.languageCode = () => _languageCode;
     localizer.textDirection = () => _textDirection;
     localizer.usesMetric = () => _usesMetric;
@@ -113,6 +115,7 @@ export function coreLocalizer() {
 
                 _localeCodes = localizer.localesToUseFrom(_dataLocales);
                 _localeCode = _localeCodes[0];   // Run iD in the highest-priority locale; the rest are fallbacks
+                _expandedLocaleCodes = utilExpandLocaleCode(_localeCode);
 
                 let loadStringsPromises = [];
 
