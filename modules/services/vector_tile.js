@@ -3,7 +3,7 @@ import { dispatch as d3_dispatch } from 'd3-dispatch';
 import deepEqual from 'fast-deep-equal';
 import turf_bboxClip from '@turf/bbox-clip';
 import stringify from 'fast-json-stable-stringify';
-import polygonClipping from 'polygon-clipping';
+import { union } from 'polyclip-ts';
 
 import Protobuf from 'pbf';
 import { VectorTile } from '@mapbox/vector-tile';
@@ -44,8 +44,12 @@ function vtToGeoJSON(data, tile, mergeCache) {
 
                 // Clip to tile bounds
                 if (geometry.type === 'MultiPolygon') {
-                    var featureClip = turf_bboxClip(feature, tile.extent.rectangle());
-                    if (!deepEqual(feature.geometry, featureClip.geometry)) {
+                    var featureClipOld = turf_bboxClip(feature, tile.extent.rectangle());
+                    var featureClipNew = union(feature, tile.extent.rectangle());
+                    const oldV = !deepEqual(feature.geometry, featureClipOld.geometry);
+                    const newV = !deepEqual(feature.geometry, featureClipNew);
+                    console.log('cf. 2', [oldV, newV]);
+                    if (newV) {
                         // feature = featureClip;
                         isClipped = true;
                     }
@@ -66,7 +70,7 @@ function vtToGeoJSON(data, tile, mergeCache) {
                     var merged = mergeCache[propertyhash];
                     if (merged && merged.length) {
                         var other = merged[0];
-                        var coords = polygonClipping.union(
+                        const coords = union(
                             feature.geometry.coordinates,
                             other.geometry.coordinates
                         );

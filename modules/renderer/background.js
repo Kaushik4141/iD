@@ -3,7 +3,7 @@ import { interpolateNumber as d3_interpolateNumber } from 'd3-interpolate';
 import { select as d3_select } from 'd3-selection';
 import turf_bboxClip from '@turf/bbox-clip';
 import turf_bbox from '@turf/bbox';
-
+import { union } from 'polyclip-ts';
 import whichPolygon from 'which-polygon';
 
 import { prefs } from '../core/preferences';
@@ -469,9 +469,21 @@ export function rendererBackground(context) {
         const viewArea = extent.area();
         best = validBackgrounds.find(s => {
           if (!s.best() || s.overlay) return false;
-          let bbox = turf_bbox(turf_bboxClip(
+
+          const bboxOld = turf_bbox(turf_bboxClip(
                 { type: 'MultiPolygon', coordinates: [ s.polygon || [extent.polygon()] ] },
                 extent.rectangle()));
+          const bbox = turf_bbox({
+            type: 'Feature',
+            geometry: {
+              type: 'MultiPolygon',
+              coordinates: union(
+                [s.polygon || [extent.polygon()]],
+                extent.rectangle()
+              ),
+            },
+          });
+          console.log('cf. 1', [bbox, bboxOld]);
           let area = geoExtent(bbox.slice(0,2), bbox.slice(2,4)).area();
           return area / viewArea > 0.5; // min visible size: 50% of viewport area
         });
