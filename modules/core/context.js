@@ -41,16 +41,22 @@ export function coreContext() {
   let _defaultChangesetComment = context.initialHashParams.comment;
   let _defaultChangesetSource = context.initialHashParams.source;
   let _defaultChangesetHashtags = context.initialHashParams.hashtags;
+
+  /** @type {GetSet<iD.Context, string>} */
   context.defaultChangesetComment = function(val) {
     if (!arguments.length) return _defaultChangesetComment;
     _defaultChangesetComment = val;
     return context;
   };
+
+  /** @type {GetSet<iD.Context, string>} */
   context.defaultChangesetSource = function(val) {
     if (!arguments.length) return _defaultChangesetSource;
     _defaultChangesetSource = val;
     return context;
   };
+
+  /** @type {GetSet<iD.Context, string>} */
   context.defaultChangesetHashtags = function(val) {
     if (!arguments.length) return _defaultChangesetHashtags;
     _defaultChangesetHashtags = val;
@@ -62,6 +68,7 @@ export function coreContext() {
 
   // If true, iD will update the title based on what the user is doing
   let _setsDocumentTitle = true;
+  /** @type {GetSet<iD.Context, boolean>} */
   context.setsDocumentTitle = function(val) {
     if (!arguments.length) return _setsDocumentTitle;
     _setsDocumentTitle = val;
@@ -69,6 +76,7 @@ export function coreContext() {
   };
   // The part of the title that is always the same
   let _documentTitleBase = document.title;
+  /** @type {GetSet<iD.Context, string>} */
   context.documentTitleBase = function(val) {
     if (!arguments.length) return _documentTitleBase;
     _documentTitleBase = val;
@@ -76,7 +84,7 @@ export function coreContext() {
   };
 
 
-  /* User interface and keybinding */
+  /** User interface and keybinding @type {ReturnType<uiInit>} */
   let _ui;
   context.ui = () => _ui;
   context.lastPointerType = () => _ui.lastPointerType();
@@ -90,8 +98,11 @@ export function coreContext() {
   // Instantiate the connection here because it doesn't require passing in
   // `context` and it's needed for pre-init calls like `preauth`
   let _connection = services.osm;
+  /** @type {ReturnType<coreHistory>} */
   let _history;
+  /** @type {ReturnType<coreValidator>} */
   let _validator;
+  /** @type {ReturnType<coreUploader>} */
   let _uploader;
   context.connection = () => _connection;
   context.history = () => _history;
@@ -107,6 +118,7 @@ export function coreContext() {
   };
 
 
+  /** @param {string | string[]} locale */
   // A string or array or locale codes to prefer over the browser's settings
   context.locale = function(locale) {
     if (!arguments.length) return localizer.localeCode();
@@ -294,6 +306,7 @@ export function coreContext() {
   // and history changes can happen frequently (e.g. when dragging).
   context.debouncedSave = _debounce(context.save, 100);
 
+  /** @template {Function} T @param {T} fn @returns {T} */
   function withDebouncedSave(fn) {
     return function() {
       const result = fn.apply(_history, arguments);
@@ -347,10 +360,13 @@ export function coreContext() {
 
 
   /* Copy/Paste */
+  /** @type {iD.Graph} */
   let _copyGraph;
   context.copyGraph = () => _copyGraph;
 
+  /** @type {string[]} */
   let _copyIDs = [];
+  /** @type {GetSet<iD.Context, string[]>} */
   context.copyIDs = function(val) {
     if (!arguments.length) return _copyIDs;
     _copyIDs = val;
@@ -367,11 +383,13 @@ export function coreContext() {
 
 
   /* Background */
+  /** @type {ReturnType<rendererBackground>} */
   let _background;
   context.background = () => _background;
 
 
   /* Features */
+  /** @type {ReturnType<rendererFeatures>} */
   let _features;
   context.features = () => _features;
   context.hasHiddenConnections = (id) => {
@@ -382,11 +400,13 @@ export function coreContext() {
 
 
   /* Photos */
+  /** @type {ReturnType<rendererPhotos>} */
   let _photos;
   context.photos = () => _photos;
 
 
   /* Map */
+  /** @type {ReturnType<rendererMap>} */
   let _map;
   context.map = () => _map;
   context.layers = () => _map.layers();
@@ -410,7 +430,9 @@ export function coreContext() {
     downloaded: false   // downloaded data from osm
   };
   context.debugFlags = () => _debugFlags;
+  /** @param {keyof _debugFlags} flag */
   context.getDebug = (flag) => flag && _debugFlags[flag];
+  /** @param {keyof _debugFlags} flag @param {boolean} val */
   context.setDebug = function(flag, val) {
     if (arguments.length === 1) val = true;
     _debugFlags[flag] = val;
@@ -421,7 +443,10 @@ export function coreContext() {
 
   /* Container */
   let _container = d3_select(null);
+  /** @type {'light' | 'dark'} */
   let _theme;
+
+  /** @type {GetSet<iD.Context, typeof _container>} */
   context.container = function(val) {
     if (!arguments.length) return _container;
     _container = val;
@@ -460,7 +485,9 @@ export function coreContext() {
     return context;
   };
 
+  /** @type {Tags} */
   let _assetMap = {};
+  /** @type {GetSet<iD.Context, Tags>} */
   context.assetMap = function(val) {
     if (!arguments.length) return _assetMap;
     _assetMap = val;
@@ -468,12 +495,14 @@ export function coreContext() {
     return context;
   };
 
+  /** @param {string} val */
   context.asset = (val) => {
     if (/^http(s)?:\/\//i.test(val)) return val;
     const filename = _assetPath + val;
     return _assetMap[filename] || filename;
   };
 
+  /** @param {string} val */
   context.imagePath = (val) => context.asset(`img/${val}`);
 
 
@@ -510,8 +539,20 @@ export function coreContext() {
   context.projection = geoRawMercator();
   context.curtainProjection = geoRawMercator();
 
+  // these lines are required to define the type-definitions.
+  // the actual value is assigned below, in the `init` function.
+  context.graph = /** @type {() => iD.Graph} */ (undefined);
+  context.pauseChangeDispatch = /** @type {Function} */ (undefined);
+  context.resumeChangeDispatch = /** @type {Function} */ (undefined);
+  context.perform = /** @type {typeof _history.perform} */ (undefined);
+  context.replace = /** @type {typeof _history.replace} */ (undefined);
+  context.pop = /** @type {typeof _history.pop} */ (undefined);
+  context.overwrite = /** @type {typeof _history.overwrite} */ (undefined);
+  context.undo = /** @type {typeof _history.undo} */ (undefined);
+  context.redo = /** @type {typeof _history.redo} */ (undefined);
+  context.on = /** @type {any} */ (undefined);
 
-  /** @returns {iD.Context} */
+  /** @returns {typeof context} */
   context.init = () => {
 
     instantiateInternal();
