@@ -1,5 +1,5 @@
 /* Downloads the latest translations from Transifex */
-const fs = require('fs');
+import fs from 'node:fs';
 
 const cldrMainDir = 'node_modules/cldr-localenames-full/main/';
 const rematchCodes = {
@@ -42,7 +42,6 @@ function getCLDROverrides() {
     'brh': {
       nativeName: 'براہوئی'
     },
-    coa: { nativeName: 'Basa Pulu Kokos', names: { en: 'Cocos Malay' } },
     'cdo': {
       nativeName: '閩東語'
     },
@@ -61,6 +60,7 @@ function getCLDROverrides() {
       script: 'Latn',
       nativeName: 'Mìng-dĕ̤ng-ngṳ̄ (Bàng-uâ-cê)'
     },
+    coa: { nativeName: 'Basa Pulu Kokos', names: { en: 'Cocos Malay' } },
     'cpx': {
       nativeName: '莆仙語'
     },
@@ -194,6 +194,8 @@ function getCLDROverrides() {
       nativeName: 'وخی'
     },
     wlp: { nativeName: 'Warlpiri' },
+    wrh: { nativeName: 'Wiradjuri' },
+    wth: { nativeName: 'Wathawurrung' },
     'wuu': {
       nativeName: '吳語'
     },
@@ -207,8 +209,6 @@ function getCLDROverrides() {
       script: 'Hant',
       nativeName: '吳語（正體）'
     },
-    wrh: { nativeName: 'Wiradjuri' },
-    wth: { nativeName: 'Wathawurrung' },
     wyi: { nativeName: 'Woiwurrung' },
     xdk: { nativeName: 'Dharug' },
     xni: { nativeName: 'Ngarigo' },
@@ -284,11 +284,9 @@ function getLangNamesInNativeLang() {
   return ordered;
 }
 
-const langNamesInNativeLang = getLangNamesInNativeLang();
+export const langNamesInNativeLang = getLangNamesInNativeLang();
 
-exports.langNamesInNativeLang = langNamesInNativeLang;
-
-exports.languageNamesInLanguageOf = function(code) {
+export function languageNamesInLanguageOf(code) {
   if (rematchCodes[code]) code = rematchCodes[code];
 
   const { language } = new Intl.Locale(code);
@@ -332,8 +330,7 @@ exports.languageNamesInLanguageOf = function(code) {
   return translatedLangsByCode;
 };
 
-
-exports.scriptNamesInLanguageOf = function(code) {
+export function scriptNamesInLanguageOf(code) {
   if (rematchCodes[code]) code = rematchCodes[code];
 
   let languageFilePath = `${cldrMainDir}${code}/scripts.json`;

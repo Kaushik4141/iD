@@ -192,7 +192,6 @@ translated to one or more languages.
 | 🟠 | Locator overlay | This layer shows feature labels in their local languages | [#7737](https://github.com/openstreetmap/iD/issues/7737) |
 | ✅ | OSM community index | | |
 | ✅ | iD validation issues | | |
-| ✅ | KeepRight issues | | |
 | ✅ | Osmose issues | Translated strings are [provided by Osmose](https://app.transifex.com/openstreetmap-france/osmose/) itself, not iD | |
 
 ### Language Coverage
@@ -214,7 +213,7 @@ are kept close to 100% coverage, while most languages have less than 50% coverag
 | ✅ | Browser zoom keyboard shortcuts | The <kbd>Cmd</kbd><kbd>+</kbd> and <kbd>Cmd</kbd><kbd>–</kbd> shortcuts used by major browsers are supported | [#7976](https://github.com/openstreetmap/iD/issues/7976) |
 | 🟠 | [Don't rely on color alone](https://www.wuhcag.com/use-of-colour/) | Some classes of map data are indistinguishable except for their colors | |
 | 🤷 | [High-contrast text colors](https://www.wuhcag.com/contrast-enhanced/) | | |
-| ❌ | [Dark mode](https://en.wikipedia.org/wiki/Light-on-dark_color_scheme) | Many people find light-on-dark UIs easier to read under certain conditions | [#8214](https://github.com/openstreetmap/iD/issues/8214) |
+| ✅ | [Dark mode](https://en.wikipedia.org/wiki/Light-on-dark_color_scheme) | Many people find light-on-dark UIs easier to read under certain conditions | [#8214](https://github.com/openstreetmap/iD/issues/8214) |
 | ❌ | Audio feedback | This would need to be easy to disable or even disabled by default | [#5821](https://github.com/openstreetmap/iD/issues/5821) |
 
 <br/>

@@ -72,6 +72,34 @@ describe('iD.util', function() {
         });
     });
 
+    describe('utilCombinedTags', function() {
+        it('sorts tag values by frequency then alphabetically', function() {
+            var n1 = iD.osmNode({ id: 'n-1', tags: { surface: 'paved' } });
+            var n2 = iD.osmNode({ id: 'n-2', tags: { surface: 'paved' } });
+            var n3 = iD.osmNode({ id: 'n-3', tags: { surface: 'paved' } });
+            var n4 = iD.osmNode({ id: 'n-4', tags: { surface: 'asphalt' } });
+            var n5 = iD.osmNode({ id: 'n-5', tags: { surface: 'gravel' } });
+            var graph = iD.coreGraph([n1, n2, n3, n4, n5]);
+            var result = iD.utilCombinedTags(['n-1', 'n-2', 'n-3', 'n-4', 'n-5'], graph);
+
+            expect(result.surface).to.be.an('array');
+            expect(result.surface[0]).to.eql('paved');
+            expect(result.surface[1]).to.eql('asphalt');
+            expect(result.surface[2]).to.eql('gravel');
+        });
+
+        it('returns raw value when all entities share the same tag value', function() {
+            var n1 = iD.osmNode({ id: 'n-1', tags: { highway: 'residential' } });
+            var n2 = iD.osmNode({ id: 'n-2', tags: { highway: 'residential' } });
+            var graph = iD.coreGraph([n1, n2]);
+            var result = iD.utilCombinedTags(['n-1', 'n-2'], graph);
+
+            expect(result.highway).to.eql('residential');
+        });
+    });
+
+
+
     it('utilTagText', function() {
         expect(iD.utilTagText({})).to.eql('');
         expect(iD.utilTagText({tags:{foo:'bar'}})).to.eql('foo=bar');
@@ -275,9 +303,14 @@ describe('iD.util', function() {
             expect(iD.utilDisplayName({tags: { name: 'Bus 224: Downtown Garland Station -> Lake Ray Hubbard TC -> Downtown Dallas', route: 'bus', ref: '224', from: 'Downtown Garland Station', to: 'Downtown Dallas', via: 'Lake Ray Hubbard TC'}})).to.eql('Bus 224: Downtown Garland Station -> Lake Ray Hubbard TC -> Downtown Dallas');
         });
         it('suppresses the network tag if the hideNetwork argument is true', function() {
-            expect(iD.utilDisplayName({tags: { name: 'Lynfield Express', ref: '25L', network: 'AT', route: 'bus' }}, true)).to.eql('25L: Lynfield Express');
-            expect(iD.utilDisplayName({tags: { network: 'SORTA', ref: '3X' }}, true)).to.eql('3X');
-            expect(iD.utilDisplayName({tags: { name: 'Dallas North Tollway', network: 'US:TX:NTTA', route: 'road' }}, true)).to.eql('Dallas North Tollway');
+            expect(iD.utilDisplayName({tags: { name: 'Lynfield Express', ref: '25L', network: 'AT', route: 'bus' }}, { hideNetwork: true })).to.eql('25L: Lynfield Express');
+            expect(iD.utilDisplayName({tags: { network: 'SORTA', ref: '3X' }}, { hideNetwork: true })).to.eql('3X');
+            expect(iD.utilDisplayName({tags: { name: 'Dallas North Tollway', network: 'US:TX:NTTA', route: 'road' }}, { hideNetwork: true })).to.eql('Dallas North Tollway');
+        });
+        it('suppresses the ref tag if the hideRef argument is true', function() {
+            expect(iD.utilDisplayName({tags: { name: 'Lynfield Express', ref: '25L', network: 'AT', route: 'bus' }}, { hideRef: true })).to.eql('AT Lynfield Express');
+            expect(iD.utilDisplayName({tags: { network: 'SORTA', ref: '3X' }}, { hideRef: true })).to.eql('SORTA');
+            expect(iD.utilDisplayName({tags: { name: 'Dallas North Tollway', network: 'US:TX:NTTA', route: 'road' }}, { hideRef: true })).to.eql('US:TX:NTTA Dallas North Tollway');
         });
         it('distinguishes unnamed features by ref', function() {
             expect(iD.utilDisplayName({tags: {ref: '66'}})).to.eql('66');
@@ -300,6 +333,21 @@ describe('iD.util', function() {
             // BART Yellow Line: Antioch => Pittsburg/Bay Point => SFO Airport => Millbrae
             expect(iD.utilDisplayName({tags: {network: 'BART', ref: 'Yellow', from: 'Antioch', to: 'Millbrae', via: 'Pittsburg/Bay Point;San Francisco International Airport', route: 'subway'}})).to.eql('BART Yellow from Antioch to Millbrae via Pittsburg/Bay Point;San Francisco International Airport');
         });
+        it('can use alternative name tags', () => {
+            expect(iD.utilDisplayName({ tags: { loc_ref: 'A' } })).to.eql('A');
+            expect(iD.utilDisplayName({ tags: { 'seamark:name': 'Bean Rock' } })).to.eql('Bean Rock');
+
+            expect(iD.utilDisplayName({ tags: { highway: 'milestone', distance: '12' } })).to.eql('12');
+            expect(iD.utilDisplayName({ tags: { distance: '12' } })).to.eql(''); // `distance` is not used as a name on other features
+
+            expect(iD.utilDisplayName({ tags: { railway: 'milestone', 'railway:position': '12' } })).to.eql('12');
+            expect(iD.utilDisplayName({ tags: { 'railway:position': '12' } })).to.eql(''); // `railway:position` is not used as a name on other features
+        });
+        it('prefers standard tags over alternative names', () => {
+            expect(iD.utilDisplayName({ tags: { name: '1', official_name: '2' } })).to.eql('1');
+            expect(iD.utilDisplayName({ tags: { ref: '1', loc_ref: '2' } })).to.eql('1');
+            expect(iD.utilDisplayName({ tags: { ref: '1', network: 'AT', loc_ref: '2' } })).to.eql('AT 1');
+        });
         it('distinguishes named features by name', function() {
             expect(iD.utilDisplayName({tags: { name: 'Ohio Turnpike', route: 'road' }})).to.eql('Ohio Turnpike');
             expect(iD.utilDisplayName({tags: { name: 'Lynfield Express', ref: '25L', route: 'bus' }})).to.eql('25L: Lynfield Express');
@@ -318,6 +366,24 @@ describe('iD.util', function() {
         it('distinguishes named features by waypoints', function() {
             expect(iD.utilDisplayName({tags: { name: 'Kings Island Express', network: 'SORTA', ref: '71X', from: 'Sycamore & Court', to: 'Fields Ertel & Royal Point', route: 'bus' }})).to.eql('SORTA 71X: Kings Island Express from Sycamore & Court to Fields Ertel & Royal Point');
             expect(iD.utilDisplayName({tags: { name: 'Local', network: 'Caltrain', from: 'San Francisco', to: 'Tamien', via: 'College Park', route: 'train' }})).to.eql('Caltrain Local from San Francisco to Tamien via College Park');
+        });
+        it('uses addr:housename', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:housename': 'Siglap House' } })).to.eql('Siglap House');
+        });
+        it('uses the street address as a last resort', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:housenumber': '31', 'addr:street': 'Princes Street' } })).to.eql('31 Princes Street');
+        });
+        it('uses the street address as a last resort', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:housenumber': '1', 'addr:place': 'Motutapu Island' } })).to.eql('1 Motutapu Island');
+        });
+        it('uses addr:unit if present', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:unit': 'Flat 1', 'addr:housenumber': '30', 'addr:street': 'Madden Street' } })).to.eql('Flat 1, 30 Madden Street');
+        });
+        it('uses just addr:housenumber if it is the only addr: tag present', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:housenumber': '32' } })).to.eql('32');
+        });
+        it('uses only the housenumber for map labels', () => {
+            expect(iD.utilDisplayName({ tags: { 'addr:housenumber': '31', 'addr:street': 'Princes Street' } }, { isMapLabel: true })).to.eql('31');
         });
     });
 

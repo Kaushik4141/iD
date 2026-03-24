@@ -1,4 +1,6 @@
+import { color as d3_color } from 'd3';
 import { remove as removeDiacritics } from 'diacritics';
+
 import { fixRTLTextForSvg, rtlRegex } from './svg_paths_rtl_fix';
 
 import { t, localizer } from '../core/localizer';
@@ -183,20 +185,25 @@ export function utilGetAllNodes(ids, graph) {
 }
 
 /**
- * @param {boolean} hideNetwork If true, the `network` tag will not be used in the name to prevent
- *                              it being shown twice (see PR #8707#discussion_r712658175)
+ * @param {iD.OsmEntity} entity the entity to generate a display name for
+ * @param {object} flags a set of flags to tweak the display name output:
+ *             - hideNetwork: If true, the `network` tag will not be used
+ *                            in the name to prevent it being shown twice
+ *                            (see PR #8707#discussion_r712658175)
+ *             - hideRef:     If true, the `ref` tag will not be output.
+ *             - isMapLabel:  If true, this name is for a label on the map.
+ *                            If falsy, it's for a label elsewhere in the UI.
  */
-export function utilDisplayName(entity, hideNetwork) {
+export function utilDisplayName(entity, flags) {
     var localizedNameKey = 'name:' + localizer.languageCode().toLowerCase();
     var name = entity.tags[localizedNameKey] || entity.tags.name || '';
 
     var tags = {
-        addr: entity.tags['addr:housenumber'] || entity.tags['addr:housename'],
         direction: entity.tags.direction,
         from: entity.tags.from,
         name,
-        network: hideNetwork ? undefined : (entity.tags.cycle_network || entity.tags.network),
-        ref: entity.tags.ref,
+        network: flags?.hideNetwork ? undefined : (entity.tags.cycle_network || entity.tags.network),
+        ref: flags?.hideRef ? undefined : entity.tags.ref,
         to: entity.tags.to,
         via: entity.tags.via
     };
@@ -210,10 +217,6 @@ export function utilDisplayName(entity, hideNetwork) {
     // Non-routes tend to be labeled in many places besides the relation lists, such as the map, where brevity is important.
     if (!entity.tags.route && name) {
         return name;
-    }
-    // unnamed buildings or address nodes: show housenumber/housename
-    if (tags.addr) {
-        return tags.addr;
     }
 
     var keyComponents = [];
@@ -242,15 +245,63 @@ export function utilDisplayName(entity, hideNetwork) {
     }
 
     if (keyComponents.length) {
-        name = t('inspector.display_name.' + keyComponents.join('_'), tags);
+        return t('inspector.display_name.' + keyComponents.join('_'), tags);
     }
 
-    return name;
+    const alternativeNameKeys = [
+        'addr:housename',
+        'alt_name',
+        'official_name',
+        'loc_name',
+        'loc_ref',
+        'unsigned_ref',
+        'seamark:name',
+        'sector:name',
+        'lock_name'
+    ];
+
+    if (entity.tags.highway === 'milestone' || entity.tags.railway === 'milestone') {
+        // distance & railway:position are only valid as names when used on a milestone
+        alternativeNameKeys.push('distance', 'railway:position');
+    }
+
+    // if there's still no name found, try some other name-like tags
+    for (const key of alternativeNameKeys) {
+        if (key in entity.tags) {
+            return entity.tags[key];
+        }
+    }
+
+    // as a last resort, use the street address as a name.
+    const unit = entity.tags['addr:unit'];
+    const housenumber = entity.tags['addr:housenumber'];
+    const streetOrPlace = entity.tags['addr:street'] || entity.tags['addr:place'];
+
+    if (!flags?.isMapLabel && unit && housenumber && streetOrPlace) {
+        return t('inspector.display_name_addr_with_unit', {
+            unit,
+            housenumber,
+            streetOrPlace,
+        });
+    }
+
+    if (!flags?.isMapLabel && housenumber && streetOrPlace) {
+        return t('inspector.display_name_addr', {
+            housenumber,
+            streetOrPlace,
+        });
+    }
+
+    // the housenumber can always be used, regardless of isMapLabel
+    if (housenumber) return housenumber;
+
+    // no match found
+    return '';
 }
 
 
 export function utilDisplayNameForPath(entity) {
-    var name = utilDisplayName(entity);
+    var name = utilDisplayName(entity, { isMapLabel: true });
     var isFirefox = utilDetect().browser.toLowerCase().indexOf('firefox') > -1;
     var isNewChromium = Number(utilDetect().version.split('.')[0]) >= 96.0;
 
@@ -347,12 +398,11 @@ export function utilCombinedTags(entityIDs, graph) {
         });
     });
 
-    for (var key in tags) {
+    for (const key in tags) {
         if (!Array.isArray(tags[key])) continue;
 
         // sort values by frequency then alphabetically
         tags[key] = tags[key].sort(function(val1, val2) {
-            var key = key; // capture
             var count2 = tagCounts[key + '=' + val2];
             var count1 = tagCounts[key + '=' + val1];
             if (count2 !== count1) {
@@ -431,7 +481,8 @@ export function utilPrefixCSSProperty(property) {
 
 var transformProperty;
 export function utilSetTransform(el, x, y, scale) {
-    var prop = transformProperty = transformProperty || utilPrefixCSSProperty('Transform');
+    transformProperty ||= utilPrefixCSSProperty('Transform');
+    var prop = transformProperty;
     var translate = utilDetect().opera ? 'translate('   + x + 'px,' + y + 'px)'
         : 'translate3d(' + x + 'px,' + y + 'px,0)';
     return el.style(prop, translate + (scale ? ' scale(' + scale + ')' : ''));
@@ -645,4 +696,27 @@ export function utilCleanOsmString(val, maxChars) {
 
     // trim to the number of allowed characters
     return utilUnicodeCharsTruncated(val, maxChars);
-  }
+}
+
+// https://stackoverflow.com/a/70360753/1627467
+export function getLuma(color) {
+    const {r, g, b} = d3_color(color);
+    return 0.2999 * r + 0.587 * g + 0.114 * b;
+}
+
+/** @param {XMLHttpRequestBodyInit} input */
+export function utilGzip(input) {
+    // check if compression is supported natively
+    if (!globalThis.CompressionStream) return undefined;
+
+    try {
+        const stream = new Response(input).body.pipeThrough(
+            new CompressionStream('gzip')
+        );
+        return new Response(stream).blob();
+     } catch {
+        // if an error is thrown, it means the browser supports
+        // CompressionStream but not the specific algorithm.
+        return undefined;
+    }
+}

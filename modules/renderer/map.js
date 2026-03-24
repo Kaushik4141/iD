@@ -1,4 +1,4 @@
-import _throttle from 'lodash-es/throttle';
+import { throttle, isArray, clamp } from 'es-toolkit/compat';
 
 import { dispatch as d3_dispatch } from 'd3-dispatch';
 import { interpolate as d3_interpolate } from 'd3-interpolate';
@@ -17,7 +17,6 @@ import { utilGetDimensions } from '../util/dimensions';
 import { utilRebind } from '../util/rebind';
 import { utilZoomPan } from '../util/zoom_pan';
 import { utilDoubleUp } from '../util/double_up';
-import { isArray, clamp } from 'lodash-es';
 
 // constants
 var TILESIZE = 256;
@@ -83,7 +82,7 @@ export function rendererMap(context) {
         });
     var _doubleUpHandler = utilDoubleUp();
 
-    var scheduleRedraw = _throttle(redraw, 750);
+    var scheduleRedraw = throttle(redraw, 750);
     // var isRedrawScheduled = false;
     // var pendingRedrawCall;
     // function scheduleRedraw() {
@@ -156,9 +155,10 @@ export function rendererMap(context) {
             .call(_zoomerPanner.transform, projection.transform())
             .on('dblclick.zoom', null); // override d3-zoom dblclick handling
 
-        map.supersurface = supersurface = selection.append('div')
+        map.supersurface = selection.append('div')
             .attr('class', 'supersurface')
             .call(utilSetTransform, 0, 0);
+        supersurface = map.supersurface;
 
         // Need a wrapper div because Opera can't cope with an absolutely positioned
         // SVG element: http://bl.ocks.org/jfirebaugh/6fbfbd922552bf776c16
@@ -166,9 +166,10 @@ export function rendererMap(context) {
             .append('div')
             .attr('class', 'layer layer-data');
 
-        map.surface = surface = wrapper
+        map.surface = wrapper
             .call(drawLayers)
             .selectAll('.surface');
+        surface = map.surface;
 
         surface
             .call(drawLabels.observe)
@@ -302,13 +303,7 @@ export function rendererMap(context) {
                 }
             }
             if (hasOrphan) {
-                var event = window.CustomEvent;
-                if (event) {
-                    event = new event('mouseup');
-                } else {
-                    event = window.document.createEvent('Event');
-                    event.initEvent('mouseup', false, false);
-                }
+                const event = new Event('mouseup');
                 // Event needs to be dispatched with an event.view property.
                 event.view = window;
                 window.dispatchEvent(event);
@@ -651,7 +646,8 @@ export function rendererMap(context) {
         // It would result in artifacts where differenced entities are redrawn with
         // one transform and unchanged entities with another.
         if (resetTransform()) {
-            difference = extent = undefined;
+            difference = undefined;
+            extent = undefined;
         }
 
         var zoom = map.zoom();
@@ -849,8 +845,8 @@ export function rendererMap(context) {
         return map;
     };
 
-    map.unobscuredCenterZoomEase = function(loc, zoom) {
-        var offset = map.unobscuredOffsetPx();
+    function trimmedCenter(loc, zoom) {
+        var offset = [paneWidth() / 2, (footerHeight() - toolbarHeight()) / 2];
 
         var proj = geoRawMercator().transform(projection.transform());  // copy projection
         // use the target zoom to calculate the offset center
@@ -860,16 +856,26 @@ export function rendererMap(context) {
         var offsetLocPx = [locPx[0] + offset[0], locPx[1] + offset[1]];
         var offsetLoc = proj.invert(offsetLocPx);
 
-        map.centerZoomEase(offsetLoc, zoom);
+        return offsetLoc;
     };
 
-    map.unobscuredOffsetPx = function() {
-        var openPane = context.container().select('.map-panes .map-pane.shown');
+    function paneWidth() {
+        const openPane = context.container().select('.map-panes .map-pane.shown');
         if (!openPane.empty()) {
-            return [openPane.node().offsetWidth/2, 0];
+            return openPane.node().offsetWidth;
         }
-        return [0, 0];
+        return 0;
     };
+
+    function toolbarHeight() {
+        const toolbar = context.container().select('.top-toolbar');
+        return toolbar.node().offsetHeight;
+    };
+
+    function footerHeight() {
+        const footer = context.container().select('.map-footer-bar');
+        return footer.node().offsetHeight;
+    }
 
     map.zoom = function(z2) {
         if (!arguments.length) {
@@ -901,21 +907,8 @@ export function rendererMap(context) {
     };
 
 
-    map.zoomTo = function(entities) {
-        if (!isArray(entities)) {
-            entities = [entities];
-        }
-
-        if (entities.length === 0) return map;
-
-        var extent = entities
-            .map(entity => entity.extent(context.graph()))
-            .reduce((a, b) => a.extend(b));
-
-        if (!isFinite(extent.area())) return map;
-
-        var z2 = clamp(map.trimmedExtentZoom(extent), 0, 20);
-        return map.centerZoom(extent.center(), z2);
+    map.zoomTo = function(what) {
+        return map.zoomToEase(what, 0);
     };
 
 
@@ -947,24 +940,29 @@ export function rendererMap(context) {
     };
 
 
-    map.zoomToEase = function(obj, duration) {
-        var extent;
-        if (Array.isArray(obj)) {
-            obj.forEach(function(entity) {
-                var entityExtent = entity.extent(context.graph());
-                if (!extent) {
-                    extent = entityExtent;
-                } else {
-                    extent = extent.extend(entityExtent);
-                }
-            });
+    map.zoomToEase = function(what, duration) {
+        let extent;
+        if (what instanceof geoExtent) {
+            // we've directly been given an extent
+            extent = what;
         } else {
-            extent = obj.extent(context.graph());
+            // we're given one or more entities to zoom to
+            if (!isArray(what)) what = [what];
+            extent = what
+                .map(entity => entity.extent(context.graph()))
+                .reduce((a, b) => a.extend(b));
         }
+
         if (!isFinite(extent.area())) return map;
 
-        var z2 = clamp(map.trimmedExtentZoom(extent), 0, 20);
-        return map.centerZoomEase(extent.center(), z2, duration);
+        var z = clamp(map.trimmedExtentZoom(extent), 0, 20);
+        const loc = trimmedCenter(extent.center(), z);
+
+        if (duration === 0) {
+            return map.centerZoom(loc, z);
+        } else {
+            return map.centerZoomEase(loc, z, duration);
+        }
     };
 
 
@@ -1032,9 +1030,11 @@ export function rendererMap(context) {
 
 
     map.trimmedExtentZoom = function(val) {
-        var trimY = 120;
-        var trimX = 40;
-        var trimmed = [_dimensions[0] - trimX, _dimensions[1] - trimY];
+        const trim = 40;
+        const trimmed = [
+            _dimensions[0] - trim - paneWidth(),
+            _dimensions[1] - trim - toolbarHeight() - footerHeight()
+        ];
         return calcExtentZoom(geoExtent(val), trimmed);
     };
 

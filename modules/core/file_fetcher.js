@@ -1,4 +1,3 @@
-import parseVersion from 'vparse';
 import { presetsCdnUrl, ociCdnUrl, wmfSitematrixCdnUrl } from '../../config/id.js';
 
 import packageJSON from '../../package.json';
@@ -11,9 +10,7 @@ export { _mainFileFetcher as fileFetcher };
 // coreFileFetcher asynchronously fetches data from JSON files
 //
 export function coreFileFetcher() {
-  const ociVersion = packageJSON.dependencies['osm-community-index'] || packageJSON.devDependencies['osm-community-index'];
-  const v = parseVersion(ociVersion);
-  const ociVersionMinor = `${v.major}.${v.minor}`;
+  const ociVersion = '5.10.0'; //packageJSON.devDependencies['osm-community-index'];
   const presetsVersion = packageJSON.devDependencies['@openstreetmap/id-tagging-schema'];
 
   let _this = {};
@@ -22,16 +19,15 @@ export function coreFileFetcher() {
     'address_formats': 'data/address_formats.min.json',
     'imagery': 'data/imagery.min.json',
     'intro_graph': 'data/intro_graph.min.json',
-    'keepRight': 'data/keepRight.min.json',
     'languages': 'data/languages.min.json',
     'locales': 'locales/index.min.json',
     'phone_formats': 'data/phone_formats.min.json',
     'qa_data': 'data/qa_data.min.json',
     'shortcuts': 'data/shortcuts.min.json',
     'territory_languages': 'data/territory_languages.min.json',
-    'oci_defaults': ociCdnUrl.replace('{version}', ociVersionMinor) + 'dist/defaults.min.json',
-    'oci_features': ociCdnUrl.replace('{version}', ociVersionMinor) + 'dist/featureCollection.min.json',
-    'oci_resources': ociCdnUrl.replace('{version}', ociVersionMinor) + 'dist/resources.min.json',
+    'oci_defaults': ociCdnUrl.replace('{version}', ociVersion) + 'dist/json/defaults.min.json',
+    'oci_features': ociCdnUrl.replace('{version}', ociVersion) + 'dist/json/featureCollection.min.json',
+    'oci_resources': ociCdnUrl.replace('{version}', ociVersion) + 'dist/json/resources.min.json',
     'presets_package': presetsCdnUrl.replace('{presets_version}', presetsVersion) + 'package.json',
     'deprecated': presetsCdnUrl + 'dist/deprecated.min.json',
     'discarded': presetsCdnUrl + 'dist/discarded.min.json',
@@ -74,7 +70,7 @@ export function coreFileFetcher() {
   function getUrl(url, which) {
     let prom = _inflight[url];
     if (!prom) {
-      _inflight[url] = prom = (window.VITEST ? import(`../${url}`) : fetch(url))
+      prom = (window.VITEST ? import(`../${url}`) : fetch(url))
         .then(response => {
           if (window.VITEST) return response.default;
 
@@ -96,6 +92,7 @@ export function coreFileFetcher() {
           delete _inflight[url];
           throw err;
         });
+      _inflight[url] = prom;
     }
 
     return prom;

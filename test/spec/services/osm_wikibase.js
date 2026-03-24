@@ -1,3 +1,4 @@
+import { fn } from '@vitest/spy';
 import { setTimeout } from 'node:timers/promises';
 
 describe('iD.serviceOsmWikibase', function () {
@@ -265,7 +266,7 @@ describe('iD.serviceOsmWikibase', function () {
 
   describe('#getEntity', function () {
     it('calls the given callback with the results of the getEntity data item query', async () => {
-      var callback = sinon.spy();
+      const callback = fn();
       fetchMock.mock(/action=wbgetentities/, {
         body: JSON.stringify({
           entities: {
@@ -277,12 +278,12 @@ describe('iD.serviceOsmWikibase', function () {
         }),
         status: 200,
         headers: { 'Content-Type': 'application/json' }
-    });
+      });
 
       wikibase.getEntity({ key: 'amenity', value: 'parking', langCodes: ['fr'] }, callback);
 
       await setTimeout(50);
-      expect(parseQueryString(fetchMock.calls()[0][0])).to.eql(
+      expect(parseQueryString(fetchMock.calls(/action=wbgetentities/)[0][0])).to.eql(
         {
           action: 'wbgetentities',
           sites: 'wiki',
@@ -297,6 +298,7 @@ describe('iD.serviceOsmWikibase', function () {
         key: keyData(),
         tag: tagData()
       });
+      expect(wikibase.getLocaleIDs()).toStrictEqual({ fr: 'Q7792' });
     });
   });
 

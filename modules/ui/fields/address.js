@@ -131,7 +131,7 @@ export function uiFieldAddress(field, context) {
             if (d.tags.name) {
                 if (d.tags.boundary === 'administrative' && d.tags.admin_level === '8') return true;
                 if (d.tags.border_type === 'city') return true;
-                if (d.tags.place === 'city' || d.tags.place === 'town' || d.tags.place === 'village') return true;
+                if (d.tags.place === 'city' || d.tags.place === 'town' || d.tags.place === 'village' || d.tags.place === 'hamlet') return true;
             }
 
             if (d.tags[`${field.key}:city`]) return true;
@@ -233,7 +233,7 @@ export function uiFieldAddress(field, context) {
         ]);
 
         var widths = addressFormat.widths || {
-            housenumber: 1/5, unit: 1/5, street: 1/2, place: 1/2,
+            housenumber: 1/5, unit: 1/5, floor: 1/5, street: 1/2, place: 1/2,
             city: 2/3, state: 1/4, postcode: 1/3
         };
 

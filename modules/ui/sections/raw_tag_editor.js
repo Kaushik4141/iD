@@ -1,6 +1,6 @@
 import { dispatch as d3_dispatch } from 'd3-dispatch';
 import { select as d3_select } from 'd3-selection';
-import { isEmpty } from 'lodash-es';
+import { isEmpty } from 'es-toolkit/compat';
 
 import { services } from '../../services';
 import { svgIcon } from '../../svg/icon';
@@ -21,7 +21,7 @@ export function uiSectionRawTagEditor(id, context) {
         .classes('raw-tag-editor')
         .label(function() {
             var count = Object.keys(_tags).filter(function(d) { return d; }).length;
-            return t.append('inspector.title_count', { title: t('inspector.tags'), count: count });
+            return t.append('inspector.title_count', { title: t.append('inspector.tags'), count: count });
         })
         .expandedByDefault(false)
         .disclosureContent(renderDisclosureContent);
@@ -135,6 +135,7 @@ export function uiSectionRawTagEditor(id, context) {
             .call(utilNoAuto)
             .attr('placeholder', t('inspector.key_value'))
             .attr('spellcheck', 'false')
+            .style('direction', 'ltr')
             .merge(textarea);
 
         textarea
@@ -190,6 +191,7 @@ export function uiSectionRawTagEditor(id, context) {
             .attr('class', 'value-wrap')
             .append('input')
             .property('type', 'text')
+            .attr('dir', 'auto')
             .attr('class', 'value')
             .call(utilNoAuto)
             .on('focus', interacted)
@@ -263,7 +265,7 @@ export function uiSectionRawTagEditor(id, context) {
                 return Array.isArray(d.value);
             })
             .attr('placeholder', function(d) {
-                return typeof d.value === 'string' ? null : t('inspector.multiple_values');
+                return Array.isArray(d.value) ? t('inspector.multiple_values') : null;
             })
             .attr('readonly', function(d) {
                 return isReadOnly(d) || null;
@@ -273,7 +275,7 @@ export function uiSectionRawTagEditor(id, context) {
                     // if there are pending changes: skip untouched tags
                     return null;
                 }
-                return typeof d.value === 'string' ? d.value : '';
+                return Array.isArray(d.value) ? '' : d.value;
             });
 
         items.selectAll('button.remove')
@@ -333,7 +335,7 @@ export function uiSectionRawTagEditor(id, context) {
             .filter(function(row) { return row.key && row.key.trim() !== ''; })
             .map(function(row) {
                 var rawVal = row.value;
-                if (typeof rawVal !== 'string') rawVal = '*';
+                if (Array.isArray(rawVal)) rawVal = '*';
                 var val = rawVal ? stringify(rawVal) : '';
                 return stringify(row.key) + '=' + val;
             })
@@ -365,7 +367,7 @@ export function uiSectionRawTagEditor(id, context) {
             if (isReadOnly({ key: change.key })) return;
 
             // skip unchanged multiselection placeholders
-            if (change.newVal === '*' && typeof change.oldVal !== 'string') return;
+            if (change.newVal === '*' && Array.isArray(change.oldVal)) return;
 
             if (change.type === '-') {
                 _pendingChange[change.key] = undefined;
@@ -425,7 +427,7 @@ export function uiSectionRawTagEditor(id, context) {
                         const filtered = data
                             .filter(d => _tags[d.value] === undefined) // already used tag
                             .filter(d => !(d.value in _discardTags)) // do not suggest discardable tags (see #9817)
-                            .filter(d => !/_\d$/.test(d)) // tag like name_1 (see #9422)
+                            .filter(d => !/_\d$/.test(d.value)) // tag like name_1 (see #9422)
                             .filter(d => d.value.toLowerCase().includes(value.toLowerCase())); // tag does not match user input
                         callback(sort(value, filtered));
                     }
@@ -542,7 +544,7 @@ export function uiSectionRawTagEditor(id, context) {
         if (isReadOnly(d)) return;
 
         // exit if this is a multiselection and no value was entered
-        if (typeof d.value !== 'string' && !this.value) return;
+        if (Array.isArray(d.value) && !this.value) return;
 
         // exit if we are currently about to delete this row anyway - #6366
         if (_pendingChange && _pendingChange.hasOwnProperty(d.key) && _pendingChange[d.key] === undefined) return;

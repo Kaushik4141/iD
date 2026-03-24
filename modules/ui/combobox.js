@@ -84,6 +84,9 @@ export function uiCombobox(context, klass) {
             if (input.classed('disabled')) return;
             _tDown = +new Date();
 
+            // mousedown should never bubble up (see #10481)
+            d3_event.stopPropagation();
+
             // clear selection
             var start = input.property('selectionStart');
             var end = input.property('selectionEnd');
@@ -383,19 +386,30 @@ export function uiCombobox(context, klass) {
                 .remove();
 
             // enter/update
-            options.enter()
+            const enter = options.enter()
                 .append('a')
                 .attr('class', function(d) {
-                    return 'combobox-option ' + (d.klass || '');
+                    return 'combobox-option ' + (d.klass || '') + (d.description ? ' has-description' : '');
                 })
-                .attr('title', function(d) { return d.title; })
-                .each(function(d) {
+                .attr('title', function(d) { return d.title; });
+
+            enter.each(function(d) {
+                    const sel = d3_select(this);
+                    const labelSpan = sel.append('span')
+                        .attr('class', 'combobox-option-label');
                     if (d.display) {
-                        d.display(d3_select(this));
+                        d.display(labelSpan);
                     } else {
-                        d3_select(this).text(d.value);
+                        labelSpan.text(d.value);
                     }
-                })
+                    if (d.description) {
+                        sel.append('span')
+                            .attr('class', 'combobox-option-description')
+                            .text(d.description);
+                    }
+                });
+
+            enter
                 .on('mouseenter', _mouseEnterHandler)
                 .on('mouseleave', _mouseLeaveHandler)
                 .merge(options)

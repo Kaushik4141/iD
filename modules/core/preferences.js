@@ -1,6 +1,9 @@
 // https://github.com/openstreetmap/iD/issues/772
-// http://mathiasbynens.be/notes/localstorage-pattern#comment-9
+import { get, set, del } from 'idb-keyval';
 import { services } from '../services';
+
+/** @type {Storage} */
+
 let _storage;
 try { _storage = localStorage; } catch {}  // eslint-disable-line no-empty
 _storage = _storage || (() => {
@@ -17,9 +20,9 @@ let _isInitializing = false;
 
 function setInitialPreferences(preferences) {
   if (!preferences || typeof preferences !== 'object') return;
-  
+
   _isInitializing = true;
-  
+
   // don't sync to server during initial load
   Object.entries(preferences).forEach(([key, value]) => {
     try {
@@ -31,7 +34,7 @@ function setInitialPreferences(preferences) {
       // ignore
     }
   });
-  
+
   _isInitializing = false;
 }
 
@@ -49,12 +52,12 @@ function loadPreferencesFromServer() {
 
     // Clear localStorage and replace with server preferences
     _isInitializing = true;
-    
+
     // Clear all existing preferences from localStorage
     for (let i = _storage.length - 1; i >= 0; i--) {
       _storage.removeItem(_storage.key(i));
     }
-    
+
     // Set server preferences in localStorage
     Object.entries(serverPreferences).forEach(([key, value]) => {
       try {
@@ -66,7 +69,7 @@ function loadPreferencesFromServer() {
         // ignore
       }
     });
-    
+
     _isInitializing = false;
   });
 }
@@ -116,6 +119,7 @@ function corePreferences(k, v) {
       syncPreferenceToServer(k, v);
     }
 
+
     return true;
   } catch {
     /* eslint-disable no-console */
@@ -137,3 +141,9 @@ corePreferences.setInitialPreferences = setInitialPreferences;
 corePreferences.loadPreferencesFromServer = loadPreferencesFromServer;
 
 export { corePreferences as prefs };
+
+export const asyncPrefs = {
+  get,
+  set,
+  del
+};
