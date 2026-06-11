@@ -1,6 +1,7 @@
 export * from './check';
 export * from './combo';
 export * from './input';
+export * from './opening_hours';
 export * from './access';
 export * from './address';
 export * from './directional_combo';
@@ -40,6 +41,8 @@ import {
     uiFieldUrl
 } from './input';
 
+import { uiFieldOpeningHours } from './opening_hours';
+
 import {
     uiFieldRadio,
     uiFieldStructureRadio
@@ -78,6 +81,7 @@ export var uiFields = {
     networkCombo: uiFieldNetworkCombo,
     number: uiFieldNumber,
     onewayCheck: uiFieldOnewayCheck,
+    opening_hours: uiFieldOpeningHours,
     radio: uiFieldRadio,
     restrictions: uiFieldRestrictions,
     schedule: uiFieldSchedule,

@@ -11,6 +11,10 @@ export function presetField(fieldID, field, allFields) {
   allFields = allFields || {};
   let _this = Object.assign({}, field);   // shallow copy
 
+  if (fieldID === 'opening_hours') {
+    _this.type = 'opening_hours';
+  }
+
   _this.id = fieldID;
 
   // for use in classes, element ids, css selectors
